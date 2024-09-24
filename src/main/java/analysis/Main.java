@@ -16,5 +16,6 @@ public class Main {
 
         System.out.println("Nombre de classes : " + analyzer.getClassCount());
         System.out.println("Nombre total de lignes de code : " + analyzer.getLineCount());
+        System.out.println("Nombre total de methodes: " + analyzer.getMethodCount());
     }
 }

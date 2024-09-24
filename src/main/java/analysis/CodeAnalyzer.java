@@ -20,6 +20,7 @@ public class CodeAnalyzer {
     // Compteurs
     private int classCount = 0;
     private int lineCount = 0;
+    private int methodCount = 0;
 
     public CodeAnalyzer(String projectSourcePath) {
         this.projectSourcePath = projectSourcePath;
@@ -40,6 +41,7 @@ public class CodeAnalyzer {
             parse.accept(classVisitor);
 
             classCount += classVisitor.getClassCount();
+            methodCount += classVisitor.getMethodCount();
 
             LineVisitor lineVisitor = new LineVisitor(parse);
             parse.accept(lineVisitor);
@@ -87,5 +89,9 @@ public class CodeAnalyzer {
 
     public int getLineCount() {
         return lineCount;
+    }
+
+    public int getMethodCount() {
+        return methodCount;
     }
 }

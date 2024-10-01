@@ -1,47 +1,59 @@
 package analysis.visitors;
 
-import analysis.InfoModel.MethodCallInfo;
+import analysis.CallGraph;
 import org.eclipse.jdt.core.dom.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class MethodCallVisitor extends ASTVisitor {
-    private List<MethodCallInfo> methodCalls = new ArrayList<>();
+    private CallGraph callGraph;
+    private String currentMethod;
+
+    public MethodCallVisitor(CallGraph callGraph, String currentMethod) {
+        this.callGraph = callGraph;
+        this.currentMethod = currentMethod;
+    }
 
     @Override
     public boolean visit(MethodInvocation node) {
         // Récupérer le nom de la méthode appelée
         String calledMethodName = node.getName().getFullyQualifiedName();
 
-        // Récupérer le type statique de l'objet receveur si disponible
-        Expression expression = node.getExpression();
-        String receiverType = "Unknown"; // Valeur par défaut si on ne peut pas déterminer le type
+        // Essayer de résoudre le type du receveur
+        String receiverType = "Unknown";
+        Expression expression = node.getExpression();  // Expression sur laquelle la méthode est appelée
 
-        // Si l'expression est non nulle, on essaie de résoudre son type
         if (expression != null) {
+            // Si l'expression n'est pas nulle, essayons de résoudre son type
             ITypeBinding typeBinding = expression.resolveTypeBinding();
             if (typeBinding != null) {
-                receiverType = typeBinding.getQualifiedName(); // Récupère le nom qualifié complet du type
+                receiverType = typeBinding.getQualifiedName();  // Récupérer le nom qualifié du type
             }
         } else {
-            // Si l'expression est nulle, on vérifie si c'est un appel implicite à "this" ou "super"
-            MethodDeclaration methodDeclaration = getEnclosingMethod(node);
-            if (methodDeclaration != null) {
-                ITypeBinding declaringClass = methodDeclaration.resolveBinding().getDeclaringClass();
-                if (declaringClass != null) {
-                    receiverType = declaringClass.getQualifiedName(); // Type de la classe contenant la méthode
-                }
+            // Si l'expression est nulle, c'est probablement un appel sur "this" ou "super"
+            ITypeBinding declaringClass = getDeclaringClass(node);
+            if (declaringClass != null) {
+                receiverType = declaringClass.getQualifiedName();  // Type de la classe englobante
             }
         }
 
-        // Ajouter l'appel de méthode à la liste
-        methodCalls.add(new MethodCallInfo(calledMethodName, receiverType));
+        // Ajouter l'arc dans le graphe d'appel
+        callGraph.addEdge(currentMethod, receiverType + "." + calledMethodName);
 
         return super.visit(node);
     }
 
-    // Méthode utilitaire pour récupérer la méthode englobante d'un noeud
+    // Méthode pour obtenir la classe qui contient la méthode actuelle
+    private ITypeBinding getDeclaringClass(ASTNode node) {
+        MethodDeclaration methodDeclaration = getEnclosingMethod(node);
+        if (methodDeclaration != null) {
+            IMethodBinding methodBinding = methodDeclaration.resolveBinding();
+            if (methodBinding != null) {
+                return methodBinding.getDeclaringClass();  // Récupérer la classe contenant la méthode
+            }
+        }
+        return null;
+    }
+
+    // Méthode utilitaire pour récupérer la méthode englobante d'un nœud
     private MethodDeclaration getEnclosingMethod(ASTNode node) {
         while (node != null) {
             if (node instanceof MethodDeclaration) {
@@ -50,10 +62,5 @@ public class MethodCallVisitor extends ASTVisitor {
             node = node.getParent();
         }
         return null;
-    }
-
-    // Récupérer la liste des méthodes appelées
-    public List<MethodCallInfo> getMethodCalls() {
-        return methodCalls;
     }
 }

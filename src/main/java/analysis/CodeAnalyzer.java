@@ -1,11 +1,6 @@
 package analysis;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
+import analysis.CallGraph;
 import analysis.InfoModel.ClassInfo;
 import analysis.visitors.ClassVisitor;
 import analysis.visitors.LineVisitor;
@@ -15,8 +10,11 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
-import org.eclipse.jdt.core.dom.*;
-
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class CodeAnalyzer {
 
@@ -34,7 +32,7 @@ public class CodeAnalyzer {
         this.projectSourcePath = projectSourcePath;
     }
 
-    public void analyze() throws IOException {
+    public void analyze(CallGraph callGraph) throws IOException {
         // Récupérer tous les fichiers .java
         final File folder = new File(projectSourcePath);
         ArrayList<File> javaFiles = listJavaFilesForFolder(folder);
@@ -43,17 +41,13 @@ public class CodeAnalyzer {
         for (File fileEntry : javaFiles) {
             String content = FileUtils.readFileToString(fileEntry, "UTF-8");
 
+            // Créer l'AST pour le fichier courant
             CompilationUnit parse = parse(content.toCharArray());
 
-            // Analyse des classes
-            ClassVisitor classVisitor = new ClassVisitor(parse);
+            // Analyse des classes et ajout des informations d'appel au graphe
+            ClassVisitor classVisitor = new ClassVisitor(callGraph);  // Passer le CallGraph
             parse.accept(classVisitor);
 
-            classCount += classVisitor.getClassCount();
-            methodCount += classVisitor.getMethodCount();
-
-            // Récupération des informations de classes analysées
-            classesInfo.addAll(classVisitor.getClassesInfo());
 
             // Analyse des lignes de code
             LineVisitor lineVisitor = new LineVisitor(parse);
@@ -62,9 +56,9 @@ public class CodeAnalyzer {
         }
     }
 
-    // Fonction pour lister les fichiers .java
+    // Méthode pour lister les fichiers .java
     private ArrayList<File> listJavaFilesForFolder(final File folder) {
-        ArrayList<File> javaFiles = new ArrayList<File>();
+        ArrayList<File> javaFiles = new ArrayList<>();
         for (File fileEntry : folder.listFiles()) {
             if (fileEntry.isDirectory()) {
                 javaFiles.addAll(listJavaFilesForFolder(fileEntry));
@@ -77,10 +71,8 @@ public class CodeAnalyzer {
 
     // Fonction pour créer l'AST à partir du contenu d'un fichier .java
     private CompilationUnit parse(char[] classSource) {
-        ASTParser parser = ASTParser.newParser(AST.JLS4); // Utiliser JLS8 pour la compatibilité avec Java 8+
-
-        // Activer la résolution des bindings
-        parser.setResolveBindings(true);
+        ASTParser parser = ASTParser.newParser(AST.JLS4); // Utiliser JLS4 pour la compatibilité avec Java 1.6+
+        parser.setResolveBindings(true); // Activer la résolution des bindings
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         parser.setBindingsRecovery(true);
 
@@ -89,11 +81,10 @@ public class CodeAnalyzer {
         parser.setCompilerOptions(options);
 
         // Configurer l'environnement pour la résolution des types
-        String[] classpathEntries = {/* chemins vers les fichiers .class ou .jar */};
+        String[] classpathEntries = {"/path/to/jdk/lib/rt.jar", "/path/to/project/lib/some-library.jar"};
         String[] sourceFolders = {projectSourcePath}; // Dossier source du projet
         parser.setEnvironment(classpathEntries, sourceFolders, null, true);
 
-        // Définir la source à analyser
         parser.setUnitName(""); // Nécessaire pour la résolution des types
         parser.setSource(classSource);
 
@@ -114,7 +105,6 @@ public class CodeAnalyzer {
         return methodCount;
     }
 
-    // Méthode pour récupérer les informations des classes analysées
     public List<ClassInfo> getClassesInfo() {
         return classesInfo;
     }

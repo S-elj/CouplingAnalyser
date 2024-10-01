@@ -4,8 +4,8 @@ import analysis.InfoModel.ClassInfo;
 import analysis.InfoModel.MethodCallInfo;
 import analysis.InfoModel.MethodInfo;
 
+import java.io.File;
 import java.io.IOException;
-
 
 public class Main {
     public static void main(String[] args) throws IOException {
@@ -15,25 +15,26 @@ public class Main {
         }
         String projectSourcePath = args[0];
 
+        // Créer le graphe d'appel
+        CallGraph callGraph = new CallGraph();
+
+        // Analyser le projet et construire le graphe
         CodeAnalyzer analyzer = new CodeAnalyzer(projectSourcePath);
-        analyzer.analyze();
+        analyzer.analyze(callGraph); // Passez le graphe à l'analyseur
 
-        System.out.println("Nombre de classes : " + analyzer.getClassCount());
-        System.out.println("Nombre total de lignes de code : " + analyzer.getLineCount());
-        System.out.println("Nombre total de méthodes : " + analyzer.getMethodCount());
+        // Afficher le graphe
+        callGraph.printGraph();
+        String outputDir = "src/res";
+        File dir = new File(outputDir);
 
-        // Afficher les détails des classes, méthodes et appels de méthode
-        for (ClassInfo classInfo : analyzer.getClassesInfo()) {
-            System.out.println("Classe : " + classInfo.getClassName());
-
-            for (MethodInfo methodInfo : classInfo.getMethods()) {
-                System.out.println("  Méthode : " + methodInfo.getMethodName());
-
-                for (MethodCallInfo methodCall : methodInfo.getMethodCalls()) {
-                    System.out.println("    Appel de méthode : " + methodCall.getCalledMethodName() +
-                            " (Type du receveur : " + methodCall.getReceiverType() + ")");
-                }
-            }
+        // Créer le dossier s'il n'existe pas
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
+
+        // Exporter le graphe dans le fichier .dot
+        String outputPath = outputDir + "/callgraph.dot";
+        callGraph.exportToDot(outputPath);
+        System.out.println("Le fichier .dot a été exporté vers : " + outputPath);
     }
 }

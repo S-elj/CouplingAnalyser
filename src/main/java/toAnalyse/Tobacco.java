@@ -30,6 +30,10 @@ public class Tobacco extends Product {
         System.out.println("Method B is called");
         // Appel d'une autre méthode de la classe
         C();
+        Necessity n = new Necessity("test", 24);
+        n.applyDiscount(12);
+        n.printNecessityInfo();
+
     }
 
     public void C() {
@@ -38,12 +42,17 @@ public class Tobacco extends Product {
         double price = getPrice();
         System.out.println("Tobacco price: " + price);
         D();
+
     }
 
     public void D() {
         System.out.println("Method D is called");
         // Appel de la méthode E
         E();
+        Necessity n = new Necessity("test", 24);
+        n.applyDiscount(12);
+        double p = n.getPrice();
+
     }
 
     public void E() {

@@ -1,8 +1,7 @@
 package analysis;
 
-import analysis.CallGraph;
 import analysis.InfoModel.ClassInfo;
-import analysis.visitors.ClassVisitor;
+import analysis.visitors.GraphVisitor;
 import analysis.visitors.LineVisitor;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.JavaCore;
@@ -32,7 +31,7 @@ public class CodeAnalyzer {
         this.projectSourcePath = projectSourcePath;
     }
 
-    public void analyze(CallGraph callGraph) throws IOException {
+    public void buildGraph(CallGraph callGraph) throws IOException {
         // Récupérer tous les fichiers .java
         final File folder = new File(projectSourcePath);
         ArrayList<File> javaFiles = listJavaFilesForFolder(folder);
@@ -45,8 +44,8 @@ public class CodeAnalyzer {
             CompilationUnit parse = parse(content.toCharArray());
 
             // Analyse des classes et ajout des informations d'appel au graphe
-            ClassVisitor classVisitor = new ClassVisitor(callGraph);  // Passer le CallGraph
-            parse.accept(classVisitor);
+            GraphVisitor graphVisitor = new GraphVisitor(callGraph);  // Passer le CallGraph
+            parse.accept(graphVisitor);
 
 
             // Analyse des lignes de code

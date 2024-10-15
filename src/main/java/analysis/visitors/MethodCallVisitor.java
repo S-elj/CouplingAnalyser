@@ -2,7 +2,6 @@ package analysis.visitors;
 
 import analysis.CallGraph;
 import org.eclipse.jdt.core.dom.*;
-
 public class MethodCallVisitor extends ASTVisitor {
     private CallGraph callGraph;
     private String currentMethod;
@@ -25,7 +24,7 @@ public class MethodCallVisitor extends ASTVisitor {
             // Si l'expression n'est pas nulle, essayons de résoudre son type
             ITypeBinding typeBinding = expression.resolveTypeBinding();
             if (typeBinding != null) {
-                receiverType = typeBinding.getQualifiedName();  // Récupérer le nom qualifié du type
+                receiverType = typeBinding.getQualifiedName();  // Récupérer le nom qualifié du type (incluant le package)
             }
         } else {
             // Si l'expression est nulle, c'est probablement un appel sur "this" ou "super"

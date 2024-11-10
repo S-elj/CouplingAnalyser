@@ -1,5 +1,9 @@
 package analysis;
 
+import analysis.InfoModel.Dendrogram;
+import analysis.graph.CallGraph;
+import analysis.graph.CouplingGraph;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -22,10 +26,10 @@ public class Main {
         analyzer.buildGraph(callGraph);
 
         // Afficher le graphe d'appel
-       // callGraph.printGraph();
+        // callGraph.printGraph();
 
         // Créer le graphe de couplage
-        CouplingGraph couplingGraph = new CouplingGraph(callGraph);
+        CouplingGraph couplingGraph = new CouplingGraph(callGraph, analyzer.getClasses());
 
 //        // Calculer la métrique de couplage entre deux classes, par exemple Tobacco et Necessity
 //        String classA = "Dump1";
@@ -39,7 +43,16 @@ public class Main {
 //        System.out.println("\nCouplage entre " + classB + " et " + classA + " : " + couplingMetric2);
 
         couplingGraph.buildCouplingGraph();
-        couplingGraph.printGraph();
+        //couplingGraph.printGraph();
+
+
+        Clustering clustering = new Clustering(couplingGraph);
+
+        double seuil = 0.02;
+
+        //Dendrogram dendrogram = clustering.performClustering();
+        Dendrogram minCouplingDendo = clustering.performClusturingWithMinimalCoupling(seuil);
+
 
         String outputDir = "src/output";
         File dir = new File(outputDir);
@@ -50,8 +63,15 @@ public class Main {
         }
 
         // Exporter le graphe dans le fichier .dot
-        String outputPath = outputDir + "/coupleGraph.dot";
-        couplingGraph.exportToDot(outputPath);
-        System.out.println("Le fichier .dot a été exporté vers : " + outputPath);
+        String couplingGraphOutputPath = outputDir + "/coupleGraph.dot";
+        String DendrogramOutputPath = outputDir + "/dendrogram.dot";
+        String minCdendo = outputDir + "/MinCouplingdendrogram.dot";
+
+
+        couplingGraph.exportToDot(couplingGraphOutputPath);
+        //dendrogram.exportToDot(DendrogramOutputPath, 100);
+        minCouplingDendo.exportToDot(minCdendo, 100);
+        System.out.println("Le fichier .dot a été exporté vers : " + couplingGraphOutputPath);
+        System.out.println("Le fichier .dot a été exporté vers : " + DendrogramOutputPath);
     }
 }

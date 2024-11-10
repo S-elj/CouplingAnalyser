@@ -1,6 +1,6 @@
 package analysis.visitors;
 
-import analysis.CallGraph;
+import analysis.graph.CallGraph;
 import org.eclipse.jdt.core.dom.*;
 public class MethodCallVisitor extends ASTVisitor {
     private CallGraph callGraph;

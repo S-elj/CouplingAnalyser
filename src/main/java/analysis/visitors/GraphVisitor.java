@@ -1,10 +1,11 @@
 package analysis.visitors;
 
-import analysis.CallGraph;
+import analysis.graph.CallGraph;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+
 public class GraphVisitor extends ASTVisitor {
     private CallGraph callGraph;
 
@@ -18,7 +19,6 @@ public class GraphVisitor extends ASTVisitor {
         String className = getQualifiedClassName(node);
 
         for (MethodDeclaration method : node.getMethods()) {
-            // Construire le nom complet de la méthode avec la classe et le package
             String methodName = className + "." + method.getName().getFullyQualifiedName();
 
             // Ajouter le nœud (la méthode) dans le graphe

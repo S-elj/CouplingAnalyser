@@ -1,6 +1,6 @@
 package analysis;
 
-import analysis.InfoModel.ClassInfo;
+import analysis.graph.CallGraph;
 import analysis.visitors.GraphVisitor;
 import analysis.visitors.LineVisitor;
 import org.apache.commons.io.FileUtils;
@@ -12,8 +12,9 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class CodeAnalyzer {
 
@@ -23,21 +24,23 @@ public class CodeAnalyzer {
     private int classCount = 0;
     private int lineCount = 0;
     private int methodCount = 0;
+    private Set<String> classes = new HashSet<>();
 
-    // Liste des informations de classes
-    private List<ClassInfo> classesInfo = new ArrayList<>();
 
     public CodeAnalyzer(String projectSourcePath) {
         this.projectSourcePath = projectSourcePath;
     }
 
     public void buildGraph(CallGraph callGraph) throws IOException {
+
+        System.out.println("Building graph...");
         // Récupérer tous les fichiers .java
         final File folder = new File(projectSourcePath);
         ArrayList<File> javaFiles = listJavaFilesForFolder(folder);
 
         // Parcourir chaque fichier .java
         for (File fileEntry : javaFiles) {
+
             String content = FileUtils.readFileToString(fileEntry, "UTF-8");
 
             // Créer l'AST pour le fichier courant
@@ -53,6 +56,8 @@ public class CodeAnalyzer {
             parse.accept(lineVisitor);
             lineCount += lineVisitor.getLineCount();
         }
+
+        System.out.println("Finished building graph... classliste: " + classes);
     }
 
     // Méthode pour lister les fichiers .java
@@ -62,8 +67,11 @@ public class CodeAnalyzer {
             if (fileEntry.isDirectory()) {
                 javaFiles.addAll(listJavaFilesForFolder(fileEntry));
             } else if (fileEntry.getName().endsWith(".java")) {
+                String className = fileEntry.getName().replaceAll("\\.java$", ""); // Retire l'extension .java
+                classes.add(className);
                 javaFiles.add(fileEntry);
             }
+
         }
         return javaFiles;
     }
@@ -80,8 +88,8 @@ public class CodeAnalyzer {
         parser.setCompilerOptions(options);
 
         // Configurer l'environnement pour la résolution des types
-        String[] classpathEntries = {"/path/to/jdk/lib/rt.jar", "/path/to/project/lib/some-library.jar"};
-        String[] sourceFolders = {projectSourcePath}; // Dossier source du projet
+        String[] classpathEntries = {}; // Pas de classes système ou de bibliothèques externes
+        String[] sourceFolders = {projectSourcePath}; // Limiter aux sources du projet
         parser.setEnvironment(classpathEntries, sourceFolders, null, true);
 
         parser.setUnitName(""); // Nécessaire pour la résolution des types
@@ -104,7 +112,9 @@ public class CodeAnalyzer {
         return methodCount;
     }
 
-    public List<ClassInfo> getClassesInfo() {
-        return classesInfo;
+    public Set<String> getClasses() {
+        return classes;
     }
+
+
 }

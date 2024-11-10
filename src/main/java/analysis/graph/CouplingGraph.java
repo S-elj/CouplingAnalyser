@@ -1,4 +1,4 @@
-package analysis;
+package analysis.graph;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -11,103 +11,97 @@ import java.util.Set;
 public class CouplingGraph {
     private CallGraph callGraph;
     private Map<String, Double> weightedEdges = new HashMap<>();
+    private Set<String> nodes;
+    private int totalBinaryRelations = -1;
+    private int actualBinaryRelations = -1;
 
-    // Constructeur qui prend le graphe d'appel
-    public CouplingGraph(CallGraph callGraph) {
+    public CouplingGraph(CallGraph callGraph, Set<String> nodes) {
         this.callGraph = callGraph;
+        this.nodes = nodes;
     }
 
-
     public void buildCouplingGraph() {
-        Set<String> nodes = callGraph.getClasses();  // Obtenir les classes (à partir des méthodes)
+        System.out.println("CLASSES BEFORE COUPLINGE= " + nodes.toString());
+        double sum = 0.0;
 
-        // Générer toutes les paires possibles de classes et calculer le couplage
+
         for (String classA : nodes) {
+            int count = 0;
             for (String classB : nodes) {
-                if (!classA.equals(classB)) {
+                if (classA.compareTo(classB) < 0) {
                     double coupling = computeCoupling(classA, classB);
                     if (coupling > 0) {
-                        String pair = classA.compareTo(classB) < 0 ?
-                                classA + "->" + classB : classB + "->" + classA;
+                        String pair = classA.compareTo(classB) < 0 ? classA + "->" + classB : classB + "->" + classA;
                         weightedEdges.put(pair, coupling);
                         System.out.println("Added: " + pair + ": " + coupling);
-
+                        count++;
+                        sum += coupling;
                     }
                 }
             }
         }
+        System.out.println("nb relatios totales calculées:" + totalBinaryRelations);
+        System.out.println("nb relations enrgistrées: " + actualBinaryRelations);
+        System.out.println("coupling sum: " + sum);
     }
 
 
-    // Compter les appels entre les classes A et B
     public int countCallsBetweenClasses(String classA, String classB) {
         Set<String> uniqueCalls = new HashSet<>();
 
         for (String edge : callGraph.getEdges()) {
             String[] parts = edge.split(" -> ");
-            String caller = parts[0];  // Récupérer l'appelant complet (Class.Method)
-            String callee = parts[1];  // Récupérer l'appelé complet (Class.Method)
+            String callerClass = getClassFromMethod(parts[0]);
+            String calleeClass = getClassFromMethod(parts[1]);
 
-            String callerClass =getClassFromMethod(caller);
-            String calleeClass = getClassFromMethod(callee);
-
-            // Vérifier si l'appel est entre les classes A et B (A->B ou B->A)
             if ((callerClass.equals(classA) && calleeClass.equals(classB)) ||
                     (callerClass.equals(classB) && calleeClass.equals(classA))) {
-                // Ajouter un appel unique entre A et B
-                String call = caller + "->" + callee;
-                uniqueCalls.add(call);
+                uniqueCalls.add(parts[0] + "->" + parts[1]);
             }
         }
 
-        return uniqueCalls.size();  // Retourner le nombre d'appels uniques entre les méthodes de A et B
+        return uniqueCalls.size();
     }
 
-    // Méthode pour compter toutes les relations binaires dans l'application
+    // Compter toutes les relations binaires dans l'application (caché pour optimisation)
     public int countTotalBinaryRelations() {
-        Set<String> uniqueRelations = new HashSet<>();
-
-        for (String edge : callGraph.getEdges()) {
-            String[] parts = edge.split(" -> ");
-            String callerClass = getClassFromMethod(parts[0]);  // Récupérer la classe appelante
-            String calleeClass = getClassFromMethod(parts[1]);  // Récupérer la classe appelée
-
-            // On s'assure que la relation est ajoutée de manière unique (indépendamment de l'ordre)
-            String pair = callerClass.compareTo(calleeClass) < 0 ?
-                    callerClass + "->" + calleeClass : calleeClass + "->" + callerClass;
-
-            uniqueRelations.add(pair);
+        if (totalBinaryRelations == -1) {
+            double sum = 0.0;
+            for (String classA : nodes) {
+                for (String classB : nodes) {
+                    if (classA.compareTo(classB) < 0) {
+                        double calls = countCallsBetweenClasses(classA, classB);
+                        totalBinaryRelations += calls;
+                    }
+                }
+            }
         }
-
-        return uniqueRelations.size();  // Retourner le nombre total de relations binaires
+        return totalBinaryRelations;
     }
 
     // Calculer la métrique de couplage entre deux classes
     public double computeCoupling(String classA, String classB) {
-        // Compter les appels entre les méthodes des classes A et B
         int callsBetweenAandB = countCallsBetweenClasses(classA, classB);
-        System.out.println("Appels entre " + classA + " et " + classB + ": " + callsBetweenAandB);
+        if (callsBetweenAandB != 0) {
+            System.out.println(callsBetweenAandB + "   appels entre " + classA + " et " + classB);
+            actualBinaryRelations += callsBetweenAandB;
+            int totalBinaryRelations = countTotalBinaryRelations();
 
-        // Compter le nombre total de relations binaires entre toutes les classes
-        int totalBinaryRelations = countTotalBinaryRelations();
-        System.out.println("Nombre total de relations binaires dans l'application: " + totalBinaryRelations);
 
-        if (totalBinaryRelations == 0) {
-            return 0;  // Éviter la division par zéro
+            return Math.round(((double) callsBetweenAandB / totalBinaryRelations) * 1000.0) / 1000.0;
+
         }
-
-        // Calculer et retourner la métrique de couplage arrondie à trois chiffres après la virgule
-        return Math.round(((double) callsBetweenAandB / totalBinaryRelations) * 1000.0) / 1000.0;
+        return callsBetweenAandB;
     }
 
     public String getClassFromMethod(String method) {
         String[] parts = method.split("\\.");
         if (parts.length < 2) {
-            return "Unknown";  // Retourner "Unknown" si le format n'est pas conforme
+            System.err.println("Format de méthode incorrect: " + method);
+            return "Unknown";
         }
-        return parts[parts.length - 2];  // La classe se trouve juste avant le nom de la méthode
+        return parts[parts.length - 2];
     }
-
 
     public void printGraph() {
         Set<String> classes = callGraph.getClasses();
@@ -147,6 +141,14 @@ public class CouplingGraph {
         writer.write("}\n");
         writer.close();
     }
-    // Méthode pour exporter le graphe pondéré au format DOT avec longueur d'arc proportionnelle au poids
+
+    public Map<String, Double> getWeightedEdges() {
+        return this.weightedEdges;
+    }
+
+    public Set<String> getClasses() {
+        return this.nodes;
+    }
+
 
 }
